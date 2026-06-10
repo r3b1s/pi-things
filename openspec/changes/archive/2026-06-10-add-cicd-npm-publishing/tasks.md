@@ -31,12 +31,12 @@
 
 > **Why manual first publish?** npm's OIDC trusted publishing requires at least one version of a package to exist on the registry before you can configure the trusted publisher link. The first publish must be done from the developer's machine using a personal npm token (classic or automation). After that, CI uses OIDC and no secrets are needed.
 
-- [ ] 5.1 Publish `@r3b1s/pi-token-killer` manually for the first time: set a personal npm token in `~/.npmrc` (`//registry.npmjs.org/:_authToken=TOKEN`) or pass it via env var (`NODE_AUTH_TOKEN=<token> pnpm --filter @r3b1s/pi-token-killer publish --access public`), then verify the package appears on https://www.npmjs.com/package/@r3b1s/pi-token-killer
-- [ ] 5.2 Publish `@r3b1s/pi-holo-mem` manually for the first time: same auth method, `NODE_AUTH_TOKEN=<token> pnpm --filter @r3b1s/pi-holo-mem publish --access public`, verify on npmjs.com
-- [ ] 5.3 Publish `@r3b1s/pi-skill-creator` manually for the first time: `NODE_AUTH_TOKEN=<token> pnpm --filter @r3b1s/pi-skill-creator publish --access public`, verify on npmjs.com
-- [ ] 5.4 Publish `@r3b1s/pi-vim-stash` manually for the first time: `NODE_AUTH_TOKEN=<token> pnpm --filter @r3b1s/pi-vim-stash publish --access public`, verify on npmjs.com
-- [ ] 5.5 For each package on npmjs.com, go to package Settings → Publishing access → Configure trusted publishing: set Repository to `r3b1s/pi-things`, Workflow to `ci.yml`, and Environment to `Release` (or the environment name used in the workflow). This links the GitHub Actions OIDC identity to the npm package.
-- [ ] 5.6 Verify trusted publishing works: create a test tag or release for one package and confirm the CI workflow can publish without any NPM_TOKEN secret
+- [x] 5.1 Publish `@r3b1s/pi-token-killer` manually for the first time: set a personal npm token in `~/.npmrc` (`//registry.npmjs.org/:_authToken=TOKEN`) or pass it via env var (`NODE_AUTH_TOKEN=<token> pnpm --filter @r3b1s/pi-token-killer publish --access public`), then verify the package appears on https://www.npmjs.com/package/@r3b1s/pi-token-killer
+- [x] 5.2 Publish `@r3b1s/pi-holo-mem` manually for the first time: same auth method, `NODE_AUTH_TOKEN=<token> pnpm --filter @r3b1s/pi-holo-mem publish --access public`, verify on npmjs.com
+- [x] 5.3 Publish `@r3b1s/pi-skill-creator` manually for the first time: `NODE_AUTH_TOKEN=<token> pnpm --filter @r3b1s/pi-skill-creator publish --access public`, verify on npmjs.com
+- [x] 5.4 Publish `@r3b1s/pi-vim-stash` manually for the first time: `NODE_AUTH_TOKEN=<token> pnpm --filter @r3b1s/pi-vim-stash publish --access public`, verify on npmjs.com
+- [x] 5.5 For each package on npmjs.com, go to package Settings → Publishing access → Configure trusted publishing: set Repository to `r3b1s/pi-things`, Workflow to `ci.yml`, and Environment to `Release` (or the environment name used in the workflow). This links the GitHub Actions OIDC identity to the npm package.
+- [x] 5.6 Verify trusted publishing works: create a test tag or release for one package and confirm the CI workflow can publish without any NPM_TOKEN secret
 
 > **pnpm auth reference:** pnpm uses the same `.npmrc` convention as npm. Token can be set in `~/.npmrc` as `//registry.npmjs.org/:_authToken=TOKEN`, passed as `NODE_AUTH_TOKEN` environment variable (which pnpm reads automatically), or via `npm login` (pnpm respects the resulting `.npmrc`).
 

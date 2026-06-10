@@ -43,7 +43,7 @@ jobs:
         run: |
           cd packages/pi-holo-mem
           python3 -m venv /tmp/pi-holo-mem-test-venv
-          /tmp/pi-holo-mem-test-venv/bin/pip install --quiet -r python/requirements.txt pytest
+          /tmp/pi-holo-mem-test-venv/bin/pip install --quiet -r python/requirements.txt pytest httpx2
           /tmp/pi-holo-mem-test-venv/bin/pytest python/tests/ -v
 
       - name: Cleanup Python test venv

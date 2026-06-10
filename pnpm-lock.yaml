@@ -87,9 +87,9 @@ importers:
       '@earendil-works/pi-tui':
         specifier: '*'
         version: 0.79.0
-      typebox:
+      '@sinclair/typebox':
         specifier: '*'
-        version: 1.2.6
+        version: 0.34.49
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1708,9 +1708,6 @@ packages:
 
   typebox@1.1.38:
     resolution: {integrity: sha512-pZ0aQPmMmXoUvSbeuWf/Hzsc+avNw/Zd6VeE8CFgkVGWyuHPJvqeJJDeJqLve+K70LvjYIoleGcoJHPT17cWoA==}
-
-  typebox@1.2.6:
-    resolution: {integrity: sha512-9LXWA7hsfQTDecP1vDjlT9JFVobJ5x9lgaZ5vrcZuhTJ6wNGxJ5FnqYCgV0pdxSTxGSHEQ+DjA+fCOcWP5+b9g==}
 
   typescript-eslint@8.61.0:
     resolution: {integrity: sha512-8y31Rd0eGTrDKqhy6vT0HtzhN+YLjQizwX3aA3hPXP/ynSfnrBXcQY5IzsP9/DM7+klX4IUncZZjkchP0z+rUw==}
@@ -3392,8 +3389,6 @@ snapshots:
       prelude-ls: 1.2.1
 
   typebox@1.1.38: {}
-
-  typebox@1.2.6: {}
 
   typescript-eslint@8.61.0(eslint@9.39.4(jiti@2.7.0))(typescript@5.9.3):
     dependencies:

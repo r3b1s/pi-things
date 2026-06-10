@@ -9,6 +9,27 @@ A pnpm workspace monorepo for Pi extension packages.
 | [`packages/pi-skill-creator`](packages/pi-skill-creator/) | `@r3b1s/pi-skill-creator` | Pi-native skill creator extension and bundled skill workflow |
 | [`packages/pi-vim-stash`](packages/pi-vim-stash/) | `@r3b1s/pi-vim-stash` | Vim-style modal editing with prompt stash for pi's TUI editor |
 | [`packages/pi-token-killer`](packages/pi-token-killer/) | `@r3b1s/pi-token-killer` | RTK (Rust Token Killer) extension — routes eligible bash commands through rtk |
+| [`packages/pi-holo-mem`](packages/pi-holo-mem/) | `@r3b1s/pi-holo-mem` | Holographic memory — structured fact storage with compositional reasoning via HRR algebra. Implements the verbatim python code for the Holographic memory plugin from [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent). |
+
+### Installation
+
+Install any package using the Pi CLI:
+
+```bash
+# Holographic memory for agents
+pi install npm:@r3b1s/pi-holo-mem
+
+# Skill creation, improvement, and review
+pi install npm:@r3b1s/pi-skill-creator
+
+# Token-optimized CLI proxy (60-90% savings)
+pi install npm:@r3b1s/pi-token-killer
+
+# Vim-style modal editing with prompt stash
+pi install npm:@r3b1s/pi-vim-stash
+```
+
+> **Note:** `pi-holo-mem` requires Python 3 with `venv` and `pip` installed. The extension automatically creates and manages its own Python virtual environment on first use.
 
 ## Development Setup
 
@@ -62,18 +83,20 @@ pnpm --filter @r3b1s/pi-skill-creator run test
 
 | Tool | Purpose |
 |------|---------|
-| pnpm 9 | Package manager + workspaces |
+| pnpm 11 | Package manager + workspaces |
 | TypeScript (ES2024) | Type checking |
 | Biome | Formatting + non-type-aware lint |
 | ESLint | Type-aware lint only |
 | Vitest | Test runner |
 | mise | Tool versions + task runner |
+| release-please | Automated versioning and changelog generation from conventional commits |
 
-See [`toolchain-research.md`](toolchain-research.md) for deferred tools (fallow, prek, rumdl, release-please).
+See [`toolchain-research.md`](toolchain-research.md) for deferred tools (fallow, prek, rumdl).
 
 ## License
 
 Each package retains its own license:
+- `pi-holo-mem`: MIT
 - `pi-skill-creator`: Apache-2.0
 - `pi-vim-stash`: MIT
 - `pi-token-killer`: MIT

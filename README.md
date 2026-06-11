@@ -1,8 +1,8 @@
-# pi-things
+![pi-things-banner.png](https://raw.githubusercontent.com/r3b1s/media-assets/refs/heads/main/pi-things/pi-things-banner.png)
 
-A pnpm workspace monorepo for Pi extension packages.
+A pnpm workspace monorepo for conveniently developing [Pi](https://pi.dev/) extensions. Credit to [@gotgenes](https://github.com/gotgenes) for inspiring the toolchain and monorepo shape with [their own monorepo](https://github.com/gotgenes/pi-packages/).
 
-## Packages
+## Extensions
 
 | Package | npm name | Description |
 |---------|----------|-------------|

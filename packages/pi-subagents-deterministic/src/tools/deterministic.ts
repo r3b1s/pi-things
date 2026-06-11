@@ -2,8 +2,9 @@ import { defineTool } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import type { SpawnOptions, SubagentsService } from "@gotgenes/pi-subagents";
 import { Type } from "@sinclair/typebox";
-import { readModelRouting, resolveModelsForType } from "#src/config";
-import { textResult } from "#src/tools/helpers";
+import { readModelRouting, resolveModelsForType } from "../config";
+import { textResult } from "./helpers";
+import { getSpawner, hasCustomSpawner } from "./spawner";
 
 /**
  * Compact agent-selection guidance embedded in the tool description.
@@ -136,10 +137,10 @@ export class SubagentDeterministicTool {
         return textResult(resolved);
       }
 
-      // Ensure SubagentsService is available
-      if (!this.svc) {
+      // Ensure at least one spawn mechanism is available
+      if (!hasCustomSpawner() && !this.svc) {
         return textResult(
-          "SubagentsService not available. Ensure @gotgenes/pi-subagents is loaded.",
+          "No spawn mechanism available. Install @gotgenes/pi-subagents or pi-tmux-sessionizer.",
         );
       }
 
@@ -162,21 +163,40 @@ export class SubagentDeterministicTool {
       }
 
       // Iterate model list with fallback
+      const spawner = getSpawner(this.svc);
       const failedModels: string[] = [];
+      let lastError: string | undefined;
       for (const entry of resolved) {
         try {
-          const agentId = this.svc.spawn(agentType, prompt, {
+          const agentId = await spawner.spawn(agentType, prompt, {
             ...spawnOptions,
             model: entry.model,
             thinkingLevel: entry.thinking,
           });
           return textResult(agentId);
-        } catch {
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
           failedModels.push(entry.model);
+          // Preserve the last error message — if it's a spawner-level
+          // error (not model-specific), surface it to the user.
+          lastError = msg;
         }
       }
 
-      // All models failed
+      // All models failed — surface the last error if it looks like
+      // an infrastructure issue (tmux missing, no spawn mechanism, etc.)
+      // rather than a model-specific failure.
+      if (
+        lastError &&
+        (lastError.includes("tmux") ||
+          lastError.includes("spawn mechanism") ||
+          lastError.includes("not found") ||
+          lastError.includes("not available"))
+      ) {
+        return textResult(
+          `Failed to spawn agent type ${agentType}: ${lastError}`,
+        );
+      }
       return textResult(
         `All models failed for agent type ${agentType}: tried ${failedModels.join(", ")}.`,
       );

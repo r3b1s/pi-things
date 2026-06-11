@@ -7,8 +7,14 @@ import type { SpawnOptions, SubagentsService } from "@gotgenes/pi-subagents";
 import { load } from "js-yaml";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { SubagentDeterministicTool } from "#src/tools/deterministic";
-import { GetSubagentResultTool } from "#src/tools/get-result";
+import {
+  GetSubagentResultTool,
+  resetResultProvider,
+  setResultProvider,
+} from "#src/tools/get-result";
 import { SubagentManualTool } from "#src/tools/manual";
+import type { Spawner } from "#src/tools/spawner";
+import { resetSpawner, setSpawner } from "#src/tools/spawner";
 
 // ──────────────────────────────────────────────
 // Temp directory helpers
@@ -302,16 +308,14 @@ describe("SubagentDeterministicTool", () => {
       );
     });
 
-    it("returns error when SubagentsService is undefined", async () => {
+    it("returns error when SubagentsService is undefined and no custom spawner", async () => {
       const tool = new SubagentDeterministicTool(tempDir, undefined);
       const result = await tool.execute({
         subagent_type: "Explore",
         prompt: "Find TODOs",
         description: "Search",
       });
-      expect(result.content[0].text).toContain(
-        "SubagentsService not available",
-      );
+      expect(result.content[0].text).toContain("No spawn mechanism available");
     });
 
     it("passes run_in_background as foreground:false to spawn", async () => {
@@ -630,6 +634,137 @@ describe("GetSubagentResultTool", () => {
 });
 
 // ──────────────────────────────────────────────
+// Tests: ResultProvider injection
+// ──────────────────────────────────────────────
+
+describe("ResultProvider", () => {
+  afterEach(() => {
+    resetResultProvider();
+  });
+
+  it("default behavior: returns result via svc when no provider set", async () => {
+    const svc = createMockSvc();
+    (svc.getRecord as ReturnType<typeof vi.fn>).mockReturnValue({
+      id: "agent-abc",
+      type: "Explore",
+      description: "Test agent",
+      status: "completed" as const,
+      result: "Task completed",
+      toolUses: 5,
+      startedAt: Date.now() - 60000,
+      completedAt: Date.now(),
+      lifetimeUsage: { input: 100, output: 50, cacheWrite: 0 },
+      compactionCount: 0,
+    });
+    const tool = new GetSubagentResultTool(svc);
+    const result = await tool.execute({ agent_id: "agent-abc" });
+    expect(result.content[0].text).toContain("completed");
+    expect(result.content[0].text).toContain("Task completed");
+  });
+
+  it("provider result wins when provider returns non-null", async () => {
+    const svc = createMockSvc();
+    setResultProvider({
+      getResult: async (agentId: string) => ({
+        content: [
+          { type: "text" as const, text: `Provider result for ${agentId}` },
+        ],
+        details: {},
+      }),
+    });
+    const tool = new GetSubagentResultTool(svc);
+    const result = await tool.execute({ agent_id: "agent-xyz" });
+    expect(result.content[0].text).toBe("Provider result for agent-xyz");
+  });
+
+  it("falls back to svc when provider returns null", async () => {
+    const svc = createMockSvc();
+    (svc.getRecord as ReturnType<typeof vi.fn>).mockReturnValue({
+      id: "agent-abc",
+      type: "Explore",
+      description: "Test agent",
+      status: "completed" as const,
+      result: "Svc completed",
+      toolUses: 5,
+      startedAt: Date.now() - 60000,
+      completedAt: Date.now(),
+      lifetimeUsage: { input: 100, output: 50, cacheWrite: 0 },
+      compactionCount: 0,
+    });
+    setResultProvider({
+      getResult: async () => null,
+    });
+    const tool = new GetSubagentResultTool(svc);
+    const result = await tool.execute({ agent_id: "agent-abc" });
+    expect(result.content[0].text).toContain("completed");
+    expect(result.content[0].text).toContain("Svc completed");
+  });
+
+  it("provider called with correct agentId", async () => {
+    const svc = createMockSvc();
+    const providerGetResult = vi.fn(async () => null);
+    setResultProvider({ getResult: providerGetResult });
+    const tool = new GetSubagentResultTool(svc);
+    await tool.execute({ agent_id: "test-id" });
+    expect(providerGetResult).toHaveBeenCalledWith("test-id");
+  });
+
+  it("multiple setResultProvider calls — latest provider wins", async () => {
+    const svc = createMockSvc();
+    const first = vi.fn(async () => ({
+      content: [{ type: "text" as const, text: "first" }],
+      details: {},
+    }));
+    const second = vi.fn(async () => ({
+      content: [{ type: "text" as const, text: "second" }],
+      details: {},
+    }));
+    setResultProvider({ getResult: first });
+    setResultProvider({ getResult: second });
+    const tool = new GetSubagentResultTool(svc);
+    const result = await tool.execute({ agent_id: "any" });
+    expect(result.content[0].text).toBe("second");
+    expect(first).not.toHaveBeenCalled();
+  });
+
+  it("provider returning null with no svc returns no-svc error", async () => {
+    setResultProvider({
+      getResult: async () => null,
+    });
+    const tool = new GetSubagentResultTool(undefined);
+    const result = await tool.execute({ agent_id: "any" });
+    expect(result.content[0].text).toContain("SubagentsService not available");
+  });
+
+  it("resetResultProvider removes custom provider, falls back to svc", async () => {
+    const svc = createMockSvc();
+    (svc.getRecord as ReturnType<typeof vi.fn>).mockReturnValue({
+      id: "agent-abc",
+      type: "Explore",
+      description: "Test agent",
+      status: "completed" as const,
+      result: "Svc completed",
+      toolUses: 5,
+      startedAt: Date.now() - 60000,
+      completedAt: Date.now(),
+      lifetimeUsage: { input: 100, output: 50, cacheWrite: 0 },
+      compactionCount: 0,
+    });
+    setResultProvider({
+      getResult: async () => ({
+        content: [{ type: "text" as const, text: "provider result" }],
+        details: {},
+      }),
+    });
+    resetResultProvider();
+    const tool = new GetSubagentResultTool(svc);
+    const result = await tool.execute({ agent_id: "agent-abc" });
+    expect(result.content[0].text).toContain("completed");
+    expect(result.content[0].text).toContain("Svc completed");
+  });
+});
+
+// ──────────────────────────────────────────────
 // Tests: Manual tool
 // ──────────────────────────────────────────────
 
@@ -757,7 +892,7 @@ describe("SubagentManualTool", () => {
       );
     });
 
-    it("returns error when SubagentsService is undefined", async () => {
+    it("returns error when SubagentsService is undefined and no custom spawner", async () => {
       const tool = new SubagentManualTool(undefined);
       const result = await tool.execute({
         subagent_type: "Explore",
@@ -765,9 +900,7 @@ describe("SubagentManualTool", () => {
         description: "Test",
         model: "haiku",
       });
-      expect(result.content[0].text).toContain(
-        "SubagentsService not available",
-      );
+      expect(result.content[0].text).toContain("No spawn mechanism available");
     });
 
     it("passes run_in_background as foreground:false to spawn", async () => {
@@ -786,6 +919,251 @@ describe("SubagentManualTool", () => {
         expect.objectContaining({ foreground: false }),
       );
     });
+  });
+});
+
+// ──────────────────────────────────────────────
+// Tests: Spawner system
+// ──────────────────────────────────────────────
+
+describe("Spawner system", () => {
+  beforeEach(() => {
+    createTempDir();
+  });
+
+  afterEach(() => {
+    cleanupTempDir();
+    resetSpawner();
+  });
+
+  it("default spawner delegates to svc.spawn() when no custom spawner set", async () => {
+    writeRouting(SAMPLE_YAML);
+    const svc = createMockSvc();
+    const tool = new SubagentDeterministicTool(tempDir, svc);
+    const result = await tool.execute({
+      subagent_type: "Explore",
+      prompt: "Find TODOs",
+      description: "Search",
+    });
+    expect(result.content[0].text).toMatch(/^agent-/);
+    expect(svc.spawn).toHaveBeenCalledWith(
+      "Explore",
+      "Find TODOs",
+      expect.objectContaining({
+        model: "cheap-model",
+        thinkingLevel: "low",
+      }),
+    );
+  });
+
+  it("setSpawner() overrides default spawner — custom spawner is called", async () => {
+    writeRouting(SAMPLE_YAML);
+    const customSpawner: Spawner = {
+      spawn: vi.fn(
+        (_agentType: string, _prompt: string, _options: SpawnOptions) =>
+          "custom-agent-id",
+      ),
+    };
+    setSpawner(customSpawner);
+
+    const svc = createMockSvc();
+    const tool = new SubagentDeterministicTool(tempDir, svc);
+    const result = await tool.execute({
+      subagent_type: "Explore",
+      prompt: "Find TODOs",
+      description: "Search",
+    });
+
+    expect(result.content[0].text).toBe("custom-agent-id");
+    // svc.spawn should NOT have been called
+    expect(svc.spawn).not.toHaveBeenCalled();
+    // Custom spawner should have been called
+    expect(customSpawner.spawn).toHaveBeenCalledWith(
+      "Explore",
+      "Find TODOs",
+      expect.objectContaining({ model: "cheap-model", thinkingLevel: "low" }),
+    );
+  });
+
+  it("setSpawner() can be called multiple times — latest spawner wins", async () => {
+    writeRouting(SAMPLE_YAML);
+    const firstSpawner: Spawner = {
+      spawn: vi.fn(() => "first-agent-id"),
+    };
+    const secondSpawner: Spawner = {
+      spawn: vi.fn(() => "second-agent-id"),
+    };
+    setSpawner(firstSpawner);
+    setSpawner(secondSpawner);
+
+    const svc = createMockSvc();
+    const tool = new SubagentDeterministicTool(tempDir, svc);
+    const result = await tool.execute({
+      subagent_type: "Explore",
+      prompt: "Test",
+      description: "Test",
+    });
+
+    expect(result.content[0].text).toBe("second-agent-id");
+    expect(firstSpawner.spawn).not.toHaveBeenCalled();
+    expect(secondSpawner.spawn).toHaveBeenCalledTimes(1);
+  });
+
+  it("no-op spawner returns error when neither svc nor custom spawner is available", async () => {
+    writeRouting(SAMPLE_YAML);
+    // No setSpawner call, no svc
+    const tool = new SubagentDeterministicTool(tempDir, undefined);
+    const result = await tool.execute({
+      subagent_type: "Explore",
+      prompt: "Test",
+      description: "Test",
+    });
+    expect(result.content[0].text).toBe(
+      "No spawn mechanism available. Install @gotgenes/pi-subagents or pi-tmux-sessionizer.",
+    );
+  });
+
+  it("model fallback works with async custom spawner (first rejection → second succeeds)", async () => {
+    writeRouting(SAMPLE_YAML);
+    let callCount = 0;
+    const asyncSpawner: Spawner = {
+      spawn: vi.fn(
+        (_agentType: string, _prompt: string, _options: SpawnOptions) => {
+          callCount++;
+          if (callCount === 1) {
+            return Promise.reject(new Error("First model failed"));
+          }
+          return Promise.resolve("async-agent-id");
+        },
+      ),
+    };
+    setSpawner(asyncSpawner);
+
+    const svc = createMockSvc();
+    const tool = new SubagentDeterministicTool(tempDir, svc);
+    const result = await tool.execute({
+      subagent_type: "Explore",
+      prompt: "Test fallback",
+      description: "Fallback test",
+    });
+
+    expect(result.content[0].text).toBe("async-agent-id");
+    expect(asyncSpawner.spawn).toHaveBeenCalledTimes(2);
+    expect(asyncSpawner.spawn).toHaveBeenNthCalledWith(
+      1,
+      "Explore",
+      "Test fallback",
+      expect.objectContaining({ model: "cheap-model" }),
+    );
+    expect(asyncSpawner.spawn).toHaveBeenNthCalledWith(
+      2,
+      "Explore",
+      "Test fallback",
+      expect.objectContaining({ model: "fallback-cheap" }),
+    );
+  });
+
+  it("sync spawner (string return) satisfies Spawner interface", async () => {
+    writeRouting(SAMPLE_YAML);
+    const syncSpawner: Spawner = {
+      spawn: (_agentType: string, _prompt: string, _options: SpawnOptions) =>
+        "sync-agent-id",
+    };
+    setSpawner(syncSpawner);
+
+    const svc = createMockSvc();
+    const tool = new SubagentDeterministicTool(tempDir, svc);
+    const result = await tool.execute({
+      subagent_type: "implementer",
+      prompt: "Sync test",
+      description: "Sync",
+    });
+    expect(result.content[0].text).toBe("sync-agent-id");
+  });
+
+  it("async spawner (Promise<string>) satisfies Spawner interface", async () => {
+    writeRouting(SAMPLE_YAML);
+    const asyncSpawner: Spawner = {
+      spawn: (_agentType: string, _prompt: string, _options: SpawnOptions) =>
+        Promise.resolve("async-agent-id"),
+    };
+    setSpawner(asyncSpawner);
+
+    const svc = createMockSvc();
+    const tool = new SubagentDeterministicTool(tempDir, svc);
+    const result = await tool.execute({
+      subagent_type: "implementer",
+      prompt: "Async test",
+      description: "Async",
+    });
+    expect(result.content[0].text).toBe("async-agent-id");
+  });
+
+  it("spawner that throws is caught and error returned from execute", async () => {
+    writeRouting(SAMPLE_YAML);
+    const throwingSpawner: Spawner = {
+      spawn: () => {
+        throw new Error("Spawner crashed");
+      },
+    };
+    setSpawner(throwingSpawner);
+
+    const svc = createMockSvc();
+    const tool = new SubagentDeterministicTool(tempDir, svc);
+    const result = await tool.execute({
+      subagent_type: "Explore",
+      prompt: "Test throw",
+      description: "Throw test",
+    });
+    expect(result.content[0].text).toContain(
+      "All models failed for agent type Explore",
+    );
+  });
+
+  it("spawner that rejects is caught and error returned from execute", async () => {
+    writeRouting(SAMPLE_YAML);
+    const rejectingSpawner: Spawner = {
+      spawn: () => Promise.reject(new Error("Spawner rejected")),
+    };
+    setSpawner(rejectingSpawner);
+
+    const svc = createMockSvc();
+    const tool = new SubagentDeterministicTool(tempDir, svc);
+    const result = await tool.execute({
+      subagent_type: "Explore",
+      prompt: "Test reject",
+      description: "Reject test",
+    });
+    expect(result.content[0].text).toContain(
+      "All models failed for agent type Explore",
+    );
+  });
+
+  it("subagent_manual routes through custom spawner when set", async () => {
+    const customSpawner: Spawner = {
+      spawn: vi.fn(
+        (_agentType: string, _prompt: string, _options: SpawnOptions) =>
+          "manual-agent-id",
+      ),
+    };
+    setSpawner(customSpawner);
+
+    const svc = createMockSvc();
+    const tool = new SubagentManualTool(svc);
+    const result = await tool.execute({
+      subagent_type: "Explore",
+      prompt: "Manual test",
+      description: "Manual",
+      model: "haiku",
+    });
+
+    expect(result.content[0].text).toBe("manual-agent-id");
+    expect(svc.spawn).not.toHaveBeenCalled();
+    expect(customSpawner.spawn).toHaveBeenCalledWith(
+      "Explore",
+      "Manual test",
+      expect.objectContaining({ model: "haiku" }),
+    );
   });
 });
 

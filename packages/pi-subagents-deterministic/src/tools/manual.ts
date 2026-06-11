@@ -2,7 +2,8 @@ import { defineTool } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import type { SpawnOptions, SubagentsService } from "@gotgenes/pi-subagents";
 import { Type } from "@sinclair/typebox";
-import { textResult } from "#src/tools/helpers";
+import { textResult } from "./helpers";
+import { getSpawner, hasCustomSpawner } from "./spawner";
 
 export class SubagentManualTool {
   constructor(private readonly svc: SubagentsService | undefined) {}
@@ -115,9 +116,9 @@ export class SubagentManualTool {
       );
     }
 
-    if (!this.svc) {
+    if (!hasCustomSpawner() && !this.svc) {
       return textResult(
-        "SubagentsService not available. Ensure @gotgenes/pi-subagents is loaded.",
+        "No spawn mechanism available. Install @gotgenes/pi-subagents or pi-tmux-sessionizer.",
       );
     }
 
@@ -133,7 +134,8 @@ export class SubagentManualTool {
       if (runInBackground !== undefined) {
         spawnOptions.foreground = !runInBackground;
       }
-      const agentId = this.svc.spawn(agentType, prompt, spawnOptions);
+      const spawner = getSpawner(this.svc);
+      const agentId = await spawner.spawn(agentType, prompt, spawnOptions);
       return textResult(agentId);
     } catch (err) {
       return textResult(

@@ -6,7 +6,63 @@ import type {
   SubagentsService,
 } from "@gotgenes/pi-subagents";
 import { Type } from "@sinclair/typebox";
-import { textResult } from "#src/tools/helpers";
+import { textResult } from "./helpers";
+
+// ──────────────────────────────────────────────
+// ResultProvider injection API
+// ──────────────────────────────────────────────
+
+/**
+ * ResultProvider allows extensions (e.g. pi-tmux-sessionizer) to inject a
+ * custom result lookup for get_subagent_result.
+ *
+ * The provider is called first by GetSubagentResultTool.execute(). If it
+ * returns non-null, that result is used directly. If it returns null, PSD
+ * falls back to its default SubagentsService-based behavior.
+ *
+ * This enables composition: PTS registers a provider wrapping its tracker,
+ * so PSD's get_subagent_result returns PTS tracker results even when PSD
+ * registered the tool first (first-writer-wins registry).
+ */
+export interface ResultProvider {
+  getResult(agentId: string): Promise<{
+    content: { type: "text"; text: string }[];
+    details: unknown;
+  } | null>;
+}
+
+let _customResultProvider: ResultProvider | undefined;
+
+/**
+ * Inject a custom result provider for get_subagent_result.
+ *
+ * Call this during extension initialization to override how subagent
+ * results are retrieved (e.g. pi-tmux-sessionizer's tracker-based lookup).
+ * PSD's GetSubagentResultTool delegates to this provider first, falling
+ * back to its SubagentsService-based behavior when the provider returns null.
+ *
+ * May be called multiple times — the most recent provider wins.
+ */
+export function setResultProvider(provider: ResultProvider): void {
+  _customResultProvider = provider;
+}
+
+/**
+ * Return the injected result provider, or undefined if none is set.
+ */
+export function getResultProvider(): ResultProvider | undefined {
+  return _customResultProvider;
+}
+
+/**
+ * Reset the custom result provider to unset state.
+ *
+ * Used by tests to isolate cases; not part of the public extension API.
+ * External extensions should never call this mid-session.
+ */
+export function resetResultProvider(): void {
+  _customResultProvider = undefined;
+}
 
 /** Compile-time exhaustiveness check for switch statements. */
 function assertNever(value: never): never {
@@ -85,6 +141,16 @@ export class GetSubagentResultTool {
 
       if (!agentId) {
         return textResult("agent_id is required.");
+      }
+
+      // Delegate to injected result provider first (e.g., PTS tracker).
+      // If the provider returns a result, use it immediately.
+      // If it returns null, fall through to svc-based lookup below.
+      if (_customResultProvider) {
+        const providerResult = await _customResultProvider.getResult(agentId);
+        if (providerResult !== null) {
+          return providerResult;
+        }
       }
 
       if (!this.svc) {

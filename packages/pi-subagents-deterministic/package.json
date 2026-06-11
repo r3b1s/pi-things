@@ -36,8 +36,8 @@
   "scripts": {
     "check": "tsc --noEmit",
     "test": "vitest run",
-    "lint": "biome check .",
-    "format": "biome check --write ."
+    "lint": "biome check src/ test/",
+    "format": "biome check --write src/ test/"
   },
   "pi": {
     "extensions": [

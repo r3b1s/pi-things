@@ -7,10 +7,12 @@ This is a pnpm workspace monorepo containing Pi extension packages.
 ```
 pi-things/
 ├── packages/
-│   ├── pi-skill-creator/   # @r3b1s/pi-skill-creator (Apache-2.0)
-│   ├── pi-vim-stash/       # @r3b1s/pi-vim-stash (MIT)
-│   ├── pi-token-killer/    # @r3b1s/pi-token-killer (MIT)
-│   └── pi-holo-mem/        # @r3b1s/pi-holo-mem (MIT)
+│   ├── pi-skill-creator/               # @r3b1s/pi-skill-creator (Apache-2.0)
+│   ├── pi-vim-stash/                   # @r3b1s/pi-vim-stash (MIT)
+│   ├── pi-subagents-deterministic/     # @r3b1s/pi-subagents-deterministic (PSD) (MIT)
+│   ├── pi-tmux-sessionizer/            # @r3b1s/pi-tmux-sessionizer (PTS) (MIT)
+│   ├── pi-token-killer/                # @r3b1s/pi-token-killer (MIT)
+│   └── pi-holo-mem/                    # @r3b1s/pi-holo-mem (MIT)
 ├── .pi/settings.json       # Local dev: loads packages from ./packages/
 ├── pnpm-workspace.yaml     # Workspace config + shared dependency catalog
 ├── tsconfig.base.json      # Shared TypeScript config (ES2024, Bundler)

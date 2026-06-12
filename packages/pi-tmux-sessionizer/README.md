@@ -1,4 +1,4 @@
-# pi-tmux-sessionizer
+# pi-tmux-sessionizer (PTS)
 
 Spawn subagents as real `pi` processes in detached tmux windows — full TUI observability, external control, and session file result extraction.
 
@@ -52,16 +52,19 @@ While attached to the tmux session, you can type directly into any subagent's wi
 - From tmux: press `Ctrl+C` in the subagent's window
 - From the `steer_subagent` tool: set `kill: true`
 
-## Composition with pi-subagents-deterministic
+## Composition with pi-subagents-deterministic (PSD)
 
 Install both packages for the best experience:
 
 ```bash
+pi install npm:@gotgenes/pi-subagents
 pi install npm:@r3b1s/pi-subagents-deterministic
 pi install npm:@r3b1s/pi-tmux-sessionizer
 ```
 
-When both are installed:
+Load order: `@gotgenes/pi-subagents` before PSD before PTS. Pi loads extensions alphabetically by package name, so this happens automatically — no config change needed.
+
+When both PSD and PTS are installed:
 - **PSD** handles model routing from `model-routing.yml` — deterministic model selection with fallback
 - **PTS** handles tmux spawning — each subagent runs in its own tmux window for full observability
 - **PSD's `subagent` tool** wins the name collision and routes through PTS's spawner

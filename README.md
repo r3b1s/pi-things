@@ -6,8 +6,8 @@ A pnpm workspace monorepo for conveniently developing [Pi](https://pi.dev/) exte
 
 | Package | npm name | Description |
 |---------|----------|-------------|
-| [`packages/pi-subagents-deterministic`](packages/pi-subagents-deterministic/) | `@r3b1s/pi-subagents-deterministic` | Deterministic subagent routing with pluggable spawner interface. Requires [`@gotgenes/pi-subagents`](https://github.com/gotgenes/pi-packages/tree/main/packages/pi-subagents) |
-| [`packages/pi-tmux-sessionizer`](packages/pi-tmux-sessionizer/) | `@r3b1s/pi-tmux-sessionizer` | Spawn subagents as real `pi` processes in detached tmux windows — full TUI observability, external control, and session file result extraction. Requires [`@gotgenes/pi-subagents`](https://github.com/gotgenes/pi-packages/tree/main/packages/pi-subagents) |
+| [`packages/pi-subagents-deterministic`](packages/pi-subagents-deterministic/) | `@r3b1s/pi-subagents-deterministic` (PSD) | Deterministic subagent routing with pluggable spawner interface. Requires [`@gotgenes/pi-subagents`](https://github.com/gotgenes/pi-packages/tree/main/packages/pi-subagents) |
+| [`packages/pi-tmux-sessionizer`](packages/pi-tmux-sessionizer/) | `@r3b1s/pi-tmux-sessionizer` (PTS) | Spawn subagents as real `pi` processes in detached tmux windows — full TUI observability, external control, and session file result extraction. Requires [`@gotgenes/pi-subagents`](https://github.com/gotgenes/pi-packages/tree/main/packages/pi-subagents) |
 | [`packages/pi-skill-creator`](packages/pi-skill-creator/) | `@r3b1s/pi-skill-creator` | Pi-native skill creator extension and bundled skill workflow |
 | [`packages/pi-vim-stash`](packages/pi-vim-stash/) | `@r3b1s/pi-vim-stash` | Vim-style modal editing with prompt stash for pi's TUI editor. Fusion of [pi-vim](https://github.com/lajarre/pi-vim) and [pi-stash](https://github.com/maxpetretta/pi-stash) — credit to [@lajarre](https://github.com/lajarre) and [@maxpetretta](https://github.com/maxpetretta) |
 | [`packages/pi-token-killer`](packages/pi-token-killer/) | `@r3b1s/pi-token-killer` | [RTK](https://github.com/rtk-ai/rtk) (Rust Token Killer) extension — routes eligible bash commands through `rtk` |
@@ -36,6 +36,7 @@ pi install npm:@r3b1s/pi-vim-stash
 
 > **Note:** `pi-holo-mem` requires Python 3 with `venv` and `pip` installed. The extension automatically creates and manages its own Python virtual environment on first use.
 > **Note:** `pi-tmux-sessionizer` requires `tmux` on your system. Install with `apt install tmux` (Debian/Ubuntu), `brew install tmux` (macOS), or `dnf install tmux` (Fedora).
+> **Note:** Load order: `@gotgenes/pi-subagents` loads before PSD, which loads before PTS. This is the default alphabetical order — no config change needed.
 
 ## Development Setup
 
